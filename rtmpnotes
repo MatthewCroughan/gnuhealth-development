@@ -1,0 +1,38 @@
+Note 2018-12-01T20.01.44
+========================
+
+
+### Build and containerise Nginx with RTMP Plugin
+
+`https://github.com/brocaar/nginx-rtmp-dockerfile.git` // Get nginx dockerfile from github
+
+`cd nginx-rtmp-dockerfile/` // enter directory
+`docker build -t nginx_rtmp .` // build nginx
+
+`docker run -p 1935:1935 -p 8080:80 --rm nginx_rtmp` // run nginx in docker, open for input from streams
+
+edit nginx.conf to change the configuration of how you want the stream urls to be formed, by default;
+
+        application encoder {
+            live on;
+
+            exec ffmpeg -i rtmp://localhost:1935/encoder/$name
+              -c:a libfdk_aac -b:a 128k -c:v libx264 -b:v 2500k -f flv -g 30 -r 30 -s 1280x720 -preset superfast -profile:v baseline rtmp://localhost:1935/hls/$name_720p2628kbs
+              -c:a libfdk_aac -b:a 128k -c:v libx264 -b:v 1000k -f flv -g 30 -r 30 -s 854x480 -preset superfast -profile:v baseline rtmp://localhost:1935/hls/$name_480p1128kbs
+              -c:a libfdk_aac -b:a 128k -c:v libx264 -b:v 750k -f flv -g 30 -r 30 -s 640x360 -preset superfast -profile:v baseline rtmp://localhost:1935/hls/$name_360p878kbs
+              -c:a libfdk_aac -b:a 128k -c:v libx264 -b:v 400k -f flv -g 30 -r 30 -s 426x240 -preset superfast -profile:v baseline rtmp://localhost:1935/hls/$name_240p528kbs
+              -c:a libfdk_aac -b:a 64k -c:v libx264 -b:v 200k -f flv -g 15 -r 15 -s 426x240 -preset superfast -profile:v baseline rtmp://localhost:1935/hls/$name_240p264kbs;
+
+// Example of a name being added to nginx.conf, $name would be pi1 if you were streaming from a pi for example. And the resulting url to put into a video player like mpv or vlc would be rtmp://ipaddress/pi1
+
+application $name {
+            live on;
+        }
+
+### Stream to Nginx RTMP server 
+
+`gst-launch-1.0 autovideosrc device="/dev/video0" ! jpegenc ! avimux ! flvmux streamable=true name=mux ! queue ! rtmpsink location='rtmp://51.75.202.207/encoder'`
+
+Stream your live content to `rtmp://localhost:1935/encoder/stream_name` where `stream_name` is the name of your stream to be viewed via the URL.
+
+
